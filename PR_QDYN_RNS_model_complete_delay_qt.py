@@ -30,7 +30,7 @@ eta_visc = 0.4e-3   # viscosity
 fluid_density = 10**3   #fluid density
 k_perm = 3e-16  # permeability
 
-q0 = 10
+q0 = 8
 
 
 #-------------------------------------#
@@ -45,7 +45,7 @@ k=0.41
 #-------------------------------------------#
 tol=1.0E-10   # error tolerance
 nitrkmax=30
-nitmax=10000  # maximum number of iterations
+nitmax=20000  # maximum number of iterations
 hmin=1.0E-12  # minimum time step
 hmax=1.0E10   # maximum time step
 safe=0.8      # safety factor for RKF iterations
@@ -178,21 +178,32 @@ taux=0
 #dP = pressions_dict[choix]["dP"]
 
 
-periods = [0,0]
+periods = [0 for _ in range(10)]
 
 def P_and_dP(t, periods, pd, pnd):
     q=q0
     Pressure = 0
     dPressure = 0
-    period = periods[1]
-    for i in range(10):
-        if i*period <= t <(i+1)*period:
+
+    time=0.01
+    time_events =np.array([time])
+
+    for i in range(len(periods)):
+        time+=periods[i]
+        time_events = np.append(time_events, time)
+
+    for i in range(len(time_events)-1):
+        if time_events[i] <= t < time_events[i+1]:
             q=i*pd.q0
+            if 4 <= i :
+                q=q/4
+            if 5 <= i :
+                q=0
             Pressure_function = pressions_dict[choix]["P"]
             dPressure_function = pressions_dict[choix]["dP"]
-            Pressure = Pressure_function(t-i*period, q, pd, pnd) + Pressure_function(i*period+0.01, q, pd, pnd)
-            dPressure = dPressure_function(t-i*period, q, pd, pnd) + dPressure_function(i*period+0.01, q, pd, pnd)
-
+            Pressure = Pressure_function(t-time_events[i], q, pd, pnd) + Pressure_function(time_events[i], q, pd, pnd)
+            dPressure = dPressure_function(t-time_events[i], q, pd, pnd) + dPressure_function(time_events[i], q, pd, pnd)
+    
     return Pressure, dPressure, q
 
 def P(t, periods, pd, pnd):

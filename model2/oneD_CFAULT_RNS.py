@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy.random
 import result1D as r
 
-filename = 'test_simulation_1.pkl'
+filename = 'test_simulation_pressure.pkl'
 
 #-------------------------------------#
 # Dimensional Mechanical parameter definition
@@ -15,8 +15,8 @@ rho_roc = 2700.0  # rock density (kg/m3)
 depth_fault = 3.0E3  # fault depth (m)
 a_fric = 0.002  # direct effect coefficient
 b_fric = 0.01  # evolution effect coefficient
-dc = 1.0E-3  # critical slip distance (m)
-V_p = 1.0E-7  # tectonic speed (m/s)
+dc = 1.0E-4  # critical slip distance (m)
+V_p = 1.0E-8  # tectonic speed (m/s)
 f0_real = 0.6
 
 #-------------------------------------------#
@@ -24,7 +24,7 @@ f0_real = 0.6
 #-------------------------------------------#
 dx=0.2                           # grid size
 n=128                             # number of points
-tol=1.0E-7                        # error tolerance
+tol=1.0E-12                        # error tolerance
 ######################
 # préférer tol=1.0E-12 pour les simulations, tol=1.0E-7 pour les tests rapides
 ######################

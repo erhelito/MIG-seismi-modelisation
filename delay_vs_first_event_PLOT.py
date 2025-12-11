@@ -8,7 +8,7 @@ import pressure_expressions_sigma0_delay
 from cycle_detection import find_cycle_start
 
 #####################################
-# Parameters    
+# Parameters
 #####################################
 
 # -------------------------------------#
@@ -24,7 +24,7 @@ dc = 1.0E-3  # critical slip distance (m)
 V_p = 1.0E-7  # tectonic speed (m/s)
 r_real = 1.0e2  # distance to the injection point (m)
 c_real = 6.8e-4  # hydraulic diffusivity (m2/s)
-Pinf = 7e6  # injection pressure (Pa)
+Pinf = 2.5e8  # injection pressure (Pa)
 
 # -------------------------------------#
 # ND Mechanical parameter definition
@@ -38,7 +38,7 @@ k = 0.41
 # -------------------------------------------#
 tol = 1.0E-10  # error tolerance
 nitrkmax = 30
-nitmax = 20000  # maximum number of iterations
+nitmax = 10000  # maximum number of iterations
 hmin = 1.0E-12  # minimum time step
 hmax = 1.0E10  # maximum time step
 safe = 0.8  # safety factor for RKF iterations
@@ -297,36 +297,27 @@ def rkf(t, phi, nu, sigma_n, f, h, pnd, pc, delay):
     return phi, nu, sigma_n, dphi, dnu, dsigma, h  # type: ignore
 
 
+def find_first_event(t_init, Phi, T):
+    phi_threshold = np.log10(1/V_p)
+    Phi_init = Phi
+    T_init = T
+
+    while T_init[0]<t_init:
+        T_init=T_init[1:]
+        Phi_init=Phi_init[1:]
+
+    while len(Phi_init)>0 and Phi_init[0]<phi_threshold:
+        T_init=T_init[1:]
+        Phi_init=Phi_init[1:]
+    
+    if len(Phi_init)==0:
+        print('No event detected from injection')
+    
+    return T_init[0]-t_init
+
 # -------------------------------------------#
 # Iterations
 # -------------------------------------------#
-
-fig,axs = plt.subplots(3,2)
-
-axs[0,0].set(xlabel='Time (s)', ylabel='Log Slip rate (ND)')
-axs[0,0].set_title(r'Slip rate evolution ($\kappa$=%.2f, $\alpha$=%.2f)' % (pnd.k, pnd.a))
-axs[0,0].grid()
-
-
-axs[0,1].set(xlabel='Time (s)', ylabel='Displacement (m)')
-axs[0,1].set_title(r'Displacement evolution ($\kappa$=%.2f, $\alpha$=%.2f)' % (pnd.k, pnd.a))
-axs[0,1].grid()
-
-axs[1,0].set(xlabel='Time (s)', ylabel='Shear stress (Pa)')
-axs[1,0].set_title(r'Shear stress evolution ($\kappa$=%.2f, $\alpha$=%.2f)' % (pnd.k, pnd.a))
-axs[1,0].grid()
-
-axs[1,1].set(xlabel='Time (s)',ylabel='Normal stress (Pa)')
-axs[1,1].set_title(r'Normal stress evolution ($\kappa$=%.2f, $\alpha$=%.2f)' % (pnd.k, pnd.a))
-axs[1,1].grid()
-
-axs[2,0].set(xlabel='Time (ND)', ylabel='Log Theta (ND)')
-axs[2,0].set_title(r'Log Theta evolution ($\kappa$=%.2f, $\alpha$=%.2f)' % (pnd.k, pnd.a))
-axs[2,0].grid()
-  # type: ignore
-axs[2,1].set(xlabel='Time (s)', ylabel='Pressure (Pa)')
-axs[2,1].set_title(r'Pressure evolution')
-axs[2,1].grid()
 
 if __name__ == "__main__":  # to allow import without running the simulation
 
@@ -334,8 +325,10 @@ if __name__ == "__main__":  # to allow import without running the simulation
     P = pressions_dict[choix]["P"]
     dP = pressions_dict[choix]["dP"]
 
-    N_taux = 5
-    taux_l = np.concatenate((np.array([0]), np.linspace(0, 0.48, N_taux)))
+    N_taux = 20
+    taux_l = np.concatenate((np.array([0]), np.linspace(0.05, 0.48, N_taux)))
+
+    durations_event_injection=np.array([])
 
     for i in range(N_taux + 1):
         if i == 1:
@@ -390,23 +383,24 @@ if __name__ == "__main__":  # to allow import without running the simulation
         Vpoint = V[1:] * Phipoint
         Pvalues = np.array([pd.sigma_n0 * P(t, pd, pnd, delay) for t in T])
 
+
+        durations_event_injection = np.append(durations_event_injection, find_first_event(delay, Phi, T))
+
         if i > 0:
             r = Result(T, V, Vpoint, Nu, Phi, Phipoint, Tau, Sigma_n, Delta, pd, pnd, pc, P=Pvalues,
                        filename=f'Taux={taux:.2f}')
-            axs[2, 1].plot(r.T * r.pd.dc / r.pd.V_p, r.P)
         else:
             r = Result(T, V, Vpoint, Nu, Phi, Phipoint, Tau, Sigma_n, Delta, pd, pnd, pc, filename='without_pressure')
-            axs[2, 1].plot(r.T * r.pd.dc / r.pd.V_p, [0 for k in r.T])
         #r.save_results('taux_0_to_1')
 
         print(i)
-        axs[0,0].plot(r.T * r.pd.dc / r.pd.V_p, r.Phi, label = taux)
-        axs[0, 1].plot(r.T * r.pd.dc / r.pd.V_p, r.Delta * r.pd.dc)
-        axs[1, 0].plot(r.T * r.pd.dc / r.pd.V_p, r.Tau * r.pd.sigma_n0)
-        axs[1, 1].plot(r.T * r.pd.dc / r.pd.V_p, r.pd.sigma_n0 * r.Sigma_n)
-        axs[2, 0].plot(r.T, r.Nu,)
         print(taux)
 
-fig.legend(title='Taux')
+plt.figure('Durations')
 
+plt.plot(taux_l[1:], (pd.dc/pd.V_p)*durations_event_injection[1:], 'k')
+plt.title('Delay vs first event')
+plt.xlabel('Ratio')
+plt.ylabel('Delay between injection and first event (s)')
+plt.grid()
 plt.show()

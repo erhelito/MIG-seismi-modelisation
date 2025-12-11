@@ -123,6 +123,34 @@ class Result1D:
             else:
                 plt.savefig(f"{path}/slip_rate_evolution_{self.filename}.pdf")
 
+    def slip_rate_evolution_by_iterations(self, save = False, path = '', name=''):
+        """
+        Plot the slip rate evolution, by iterations.
+
+        Parameters
+        ----------
+        save : bool
+            If True, save the figure in the given path.
+        path : str
+            The path where the figure will be saved.
+        name : str
+            The name of the figure to save.
+        """
+        plt.figure('Slip rate evolution by iterations')
+
+        plt.contour(self.x,np.arange(len(self.T)),np.log10(self.V),30)
+
+        plt.xlabel('Position along the fault (ND)')
+        plt.ylabel('Iteration (ND)')
+        plt.grid()
+        plt.colorbar(label='Log10 Slip rate (ND)')
+
+        if save:
+            if name != '':
+                plt.savefig(f"{path}/slip_rate_evolution_{name}.pdf")
+            else:
+                plt.savefig(f"{path}/slip_rate_evolution_{self.filename}.pdf")
+
     def slip_rate_evolution_3D(self, save=False, path='', name=''):
         """
         Plot the slip rate evolution in 3D.
